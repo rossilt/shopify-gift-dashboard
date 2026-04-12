@@ -7,94 +7,114 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <header class="page-header">
-      <div>
-        <h1>Settings</h1>
-        <p class="muted">Change the reason, schedule, and SKU priority for each gift tier</p>
-      </div>
+  <main class="app-shell">
+    <div class="container">
+      <header class="page-header">
+        <div class="brand-block">
+          <div class="brand-mark">K</div>
+          <div>
+            <h1 class="brand-title">Kaukių pridėjimas</h1>
+            <p class="brand-subtitle">Settings and SKU priority management</p>
+          </div>
+        </div>
 
-      <nav class="nav">
-        <a href="/">Dashboard</a>
-        <a href="/settings">Settings</a>
-        <a href="/runs">Runs</a>
-        <a href="/logout">Logout</a>
-      </nav>
-    </header>
+        <div class="topbar-right">
+          <% if (currentUser) { %>
+            <div class="user-chip"><%= currentUser.username %></div>
+          <% } %>
 
-    <% if (error) { %>
-      <div class="alert alert-error"><%= error %></div>
-    <% } %>
+          <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/settings">Settings</a>
+            <a href="/runs">Runs</a>
+            <a href="/logout">Logout</a>
+          </nav>
+        </div>
+      </header>
 
-    <% if (success) { %>
-      <div class="alert alert-success"><%= success %></div>
-    <% } %>
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
 
-    <section class="card">
-      <h2>Automation Settings</h2>
+      <% if (success) { %>
+        <div class="alert alert-success"><%= success %></div>
+      <% } %>
 
-      <form method="post" action="/settings" class="stack">
-        <label>
-          Gift reason
-          <input type="text" name="reasonText" value="<%= settings.reasonText %>" required />
-        </label>
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Automation settings</h2>
+              <p class="muted">Adjust reason text, schedule, timezone, and SKU priority.</p>
+            </div>
+          </div>
 
-        <label>
-          <input
-            type="checkbox"
-            name="scheduleEnabled"
-            <%= settings.scheduleEnabled ? "checked" : "" %>
-          />
-          Enable daily schedule
-        </label>
+          <form method="post" action="/settings" class="form-stack">
+            <div class="form-grid">
+              <div>
+                <label class="form-label">Gift reason</label>
+                <input class="form-control" type="text" name="reasonText" value="<%= settings.reasonText %>" required />
+              </div>
 
-        <label>
-          Schedule hour (0-23)
-          <input
-            type="number"
-            name="scheduleHour"
-            min="0"
-            max="23"
-            value="<%= settings.scheduleHour %>"
-            required
-          />
-        </label>
+              <div>
+                <label class="form-label">Timezone</label>
+                <input class="form-control" type="text" name="timezone" value="<%= settings.timezone %>" required />
+              </div>
 
-        <label>
-          Schedule minute (0-59)
-          <input
-            type="number"
-            name="scheduleMinute"
-            min="0"
-            max="59"
-            value="<%= settings.scheduleMinute %>"
-            required
-          />
-        </label>
+              <div>
+                <label class="form-label">Schedule hour (0-23)</label>
+                <input class="form-control" type="number" name="scheduleHour" min="0" max="23" value="<%= settings.scheduleHour %>" required />
+              </div>
 
-        <label>
-          Timezone
-          <input type="text" name="timezone" value="<%= settings.timezone %>" required />
-        </label>
+              <div>
+                <label class="form-label">Schedule minute (0-59)</label>
+                <input class="form-control" type="number" name="scheduleMinute" min="0" max="59" value="<%= settings.scheduleMinute %>" required />
+              </div>
+            </div>
 
-        <h2>Tier SKU Priority</h2>
-        <p class="muted">Enter SKUs separated by commas. The first SKU is used first, the next ones are fallback options.</p>
+            <label class="checkbox-row">
+              <input type="checkbox" name="scheduleEnabled" <%= settings.scheduleEnabled ? "checked" : "" %> />
+              Enable daily schedule
+            </label>
 
-        <% settings.giftRules.forEach(rule => { %>
-          <label>
-            <strong><%= rule.label %></strong>
-            <input
-              type="text"
-              name="giftRule_<%= rule.tier %>"
-              value="<%= rule.skus.join(', ') %>"
-              required
-            />
-          </label>
-        <% }) %>
+            <section class="card">
+              <h3>Tier SKU priority</h3>
+              <p class="muted">
+                Separate SKUs with commas. The first SKU is tried first, then the next SKU becomes fallback.
+              </p>
 
-        <button type="submit" class="btn">Save settings</button>
-      </form>
-    </section>
-  </div>
+              <div class="form-stack">
+                <% settings.giftRules.forEach(rule => { %>
+                  <div>
+                    <label class="form-label"><%= rule.label %></label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      name="giftRule_<%= rule.tier %>"
+                      value="<%= rule.skus.join(', ') %>"
+                      required
+                    />
+                    <div class="form-help">
+                      Fixed price band:
+                      <% if (rule.maxExclusive == null) { %>
+                        €<%= rule.min %>+
+                      <% } else { %>
+                        €<%= rule.min %> to &lt; €<%= rule.maxExclusive %>
+                      <% } %>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </section>
+
+            <div class="button-row">
+              <button type="submit" class="button button-primary">Save settings</button>
+              <a href="/" class="button button-ghost">Back to dashboard</a>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
 </body>
 </html>

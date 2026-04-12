@@ -7,29 +7,32 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="container narrow">
-    <section class="card">
-      <h1>Gift Mask Dashboard Login</h1>
-      <p class="muted">Enter your dashboard credentials</p>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <div class="brand-pill">Shopify Automation</div>
+      <h1 class="auth-title">Kaukių pridėjimas</h1>
+      <p class="auth-subtitle">
+        Secure access to your gift-mask dashboard for dry runs, live runs, settings, and history.
+      </p>
 
       <% if (error) { %>
         <div class="alert alert-error"><%= error %></div>
       <% } %>
 
-      <form method="post" action="/login" class="stack">
-        <label>
-          Username
-          <input type="text" name="username" required />
-        </label>
+      <form method="post" action="/login" class="form-stack">
+        <div>
+          <label class="form-label" for="username">Username</label>
+          <input class="form-control" id="username" type="text" name="username" required />
+        </div>
 
-        <label>
-          Password
-          <input type="password" name="password" required />
-        </label>
+        <div>
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" type="password" name="password" required />
+        </div>
 
-        <button type="submit" class="btn">Log in</button>
+        <button type="submit" class="button button-primary">Log in</button>
       </form>
     </section>
-  </div>
+  </main>
 </body>
 </html>

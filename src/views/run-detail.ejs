@@ -7,52 +7,93 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <header class="page-header">
-      <div>
-        <h1>Run Detail</h1>
-        <p class="muted"><%= entry.savedAt %></p>
-      </div>
+  <main class="app-shell">
+    <div class="container">
+      <header class="page-header">
+        <div class="brand-block">
+          <div class="brand-mark">K</div>
+          <div>
+            <h1 class="brand-title">Kaukių pridėjimas</h1>
+            <p class="brand-subtitle">Run detail</p>
+          </div>
+        </div>
 
-      <nav class="nav">
-        <a href="/">Dashboard</a>
-        <a href="/settings">Settings</a>
-        <a href="/runs">Runs</a>
-      </nav>
-    </header>
+        <div class="topbar-right">
+          <% if (currentUser) { %>
+            <div class="user-chip"><%= currentUser.username %></div>
+          <% } %>
 
-    <section class="card">
-      <p><strong>Mode:</strong> <%= entry.run.mode %></p>
-      <p><strong>Selection:</strong> <%= entry.run.selectionMode %></p>
-      <p><strong>Fetched at:</strong> <%= entry.run.fetchedAt %></p>
+          <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/settings">Settings</a>
+            <a href="/runs">Runs</a>
+            <a href="/logout">Logout</a>
+          </nav>
+        </div>
+      </header>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Subtotal</th>
-              <th>Tier</th>
-              <th>SKU</th>
-              <th>Status</th>
-              <th>Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% entry.run.results.forEach(row => { %>
-              <tr>
-                <td><%= row.orderName %></td>
-                <td><%= row.subtotal || "-" %></td>
-                <td><%= row.plannedTier || "-" %></td>
-                <td><%= row.plannedSku || "-" %></td>
-                <td><%= row.status %></td>
-                <td><%= row.reason %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </div>
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Run detail</h2>
+              <p class="muted">Saved at <%= entry.savedAt %></p>
+            </div>
+            <a href="/runs" class="button button-ghost">Back to runs</a>
+          </div>
+
+          <div class="meta-grid" style="margin-bottom: 18px;">
+            <div class="meta-card">
+              <div class="meta-label">Mode</div>
+              <div class="meta-value"><%= entry.run.mode %></div>
+            </div>
+            <div class="meta-card">
+              <div class="meta-label">Selection</div>
+              <div class="meta-value"><%= entry.run.selectionMode %></div>
+            </div>
+            <div class="meta-card">
+              <div class="meta-label">Reason</div>
+              <div class="meta-value" style="font-size:16px;"><%= entry.run.giftReason %></div>
+            </div>
+            <div class="meta-card">
+              <div class="meta-label">Fetched at</div>
+              <div class="meta-value" style="font-size:16px;"><%= entry.run.fetchedAt %></div>
+            </div>
+          </div>
+
+          <div class="data-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Subtotal</th>
+                  <th>Tier</th>
+                  <th>SKU</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% entry.run.results.forEach(row => { %>
+                  <tr>
+                    <td><%= row.orderName %></td>
+                    <td><%= row.subtotal || "-" %></td>
+                    <td><%= row.plannedTier || "-" %></td>
+                    <td><%= row.plannedSku || "-" %></td>
+                    <td>
+                      <span class="status-badge status-<%= row.status %>">
+                        <%= row.status %>
+                      </span>
+                    </td>
+                    <td><%= row.reason %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
 </body>
 </html>

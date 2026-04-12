@@ -7,56 +7,83 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <header class="page-header">
-      <div>
-        <h1>Runs</h1>
-        <p class="muted">Temporary in-memory history</p>
-      </div>
-
-      <nav class="nav">
-        <a href="/">Dashboard</a>
-        <a href="/settings">Settings</a>
-        <a href="/runs">Runs</a>
-      </nav>
-    </header>
-
-    <section class="card">
-      <% if (!runHistory.length) { %>
-        <p class="muted">No runs saved yet.</p>
-      <% } else { %>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Saved At</th>
-                <th>Mode</th>
-                <th>Selection</th>
-                <th>Applied</th>
-                <th>Planned</th>
-                <th>Skipped</th>
-                <th>Failed</th>
-                <th>Open</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% runHistory.forEach(entry => { %>
-                <tr>
-                  <td><%= entry.savedAt %></td>
-                  <td><%= entry.run.mode %></td>
-                  <td><%= entry.run.selectionMode %></td>
-                  <td><%= entry.run.summary.applied %></td>
-                  <td><%= entry.run.summary.planned %></td>
-                  <td><%= entry.run.summary.skipped %></td>
-                  <td><%= entry.run.summary.failed %></td>
-                  <td><a href="/runs/<%= entry.id %>">View</a></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
+  <main class="app-shell">
+    <div class="container">
+      <header class="page-header">
+        <div class="brand-block">
+          <div class="brand-mark">K</div>
+          <div>
+            <h1 class="brand-title">Kaukių pridėjimas</h1>
+            <p class="brand-subtitle">Run history and result overview</p>
+          </div>
         </div>
-      <% } %>
-    </section>
-  </div>
+
+        <div class="topbar-right">
+          <% if (currentUser) { %>
+            <div class="user-chip"><%= currentUser.username %></div>
+          <% } %>
+
+          <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/settings">Settings</a>
+            <a href="/runs">Runs</a>
+            <a href="/logout">Logout</a>
+          </nav>
+        </div>
+      </header>
+
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Recent runs</h2>
+              <p class="muted">Review the latest automation activity and open any run for details.</p>
+            </div>
+          </div>
+
+          <% if (!runHistory.length) { %>
+            <div class="empty-state">No runs saved yet.</div>
+          <% } else { %>
+            <div class="data-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Saved at</th>
+                    <th>Mode</th>
+                    <th>Selection</th>
+                    <th>Applied</th>
+                    <th>Planned</th>
+                    <th>Skipped</th>
+                    <th>Failed</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% runHistory.forEach(entry => { %>
+                    <tr>
+                      <td><%= entry.savedAt %></td>
+                      <td>
+                        <span class="status-badge status-<%= entry.run.mode === 'apply' ? 'applied' : 'planned' %>">
+                          <%= entry.run.mode %>
+                        </span>
+                      </td>
+                      <td><%= entry.run.selectionMode %></td>
+                      <td><%= entry.run.summary.applied %></td>
+                      <td><%= entry.run.summary.planned %></td>
+                      <td><%= entry.run.summary.skipped %></td>
+                      <td><%= entry.run.summary.failed %></td>
+                      <td>
+                        <a href="/runs/<%= entry.id %>" class="button button-ghost">View</a>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </section>
+    </div>
+  </main>
 </body>
 </html>

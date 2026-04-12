@@ -7,168 +7,254 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <header class="page-header">
-      <div>
-        <h1>Gift Mask Dashboard</h1>
-        <p class="muted">Local dashboard for your Shopify gift-mask automation</p>
-      </div>
-
-      <nav class="nav">
-        <a href="/">Dashboard</a>
-        <a href="/settings">Settings</a>
-        <a href="/runs">Runs</a>
-        <a href="/logout">Logout</a>
-      </nav>
-    </header>
-
-    <% if (error) { %>
-      <div class="alert alert-error"><%= error %></div>
-    <% } %>
-
-    <% if (success) { %>
-      <div class="alert alert-success"><%= success %></div>
-    <% } %>
-
-    <section class="card">
-      <h2>Current Rules</h2>
-      <p><strong>Reason:</strong> <%= giftReason %></p>
-
-      <div class="rules">
-        <% giftRules.forEach(rule => { %>
-          <div class="rule-box">
-            <strong><%= rule.label %></strong>
-            <div>
-              <% if (rule.maxExclusive == null) { %>
-                €<%= rule.min %>+
-              <% } else { %>
-                €<%= rule.min %> to &lt; €<%= rule.maxExclusive %>
-              <% } %>
-            </div>
-            <div>SKUs: <%= rule.skus.join(", ") %></div>
+  <main class="app-shell">
+    <div class="container">
+      <header class="page-header">
+        <div class="brand-block">
+          <div class="brand-mark">K</div>
+          <div>
+            <h1 class="brand-title">Kaukių pridėjimas</h1>
+            <p class="brand-subtitle">Modern Shopify dashboard for gift-mask automation</p>
           </div>
-        <% }) %>
-      </div>
-    </section>
+        </div>
 
-    <div class="grid-two">
-      <section class="card">
-        <h2>All Unfulfilled Orders</h2>
+        <div class="topbar-right">
+          <% if (currentUser) { %>
+            <div class="user-chip"><%= currentUser.username %></div>
+          <% } %>
 
-        <form method="post" action="/run/dry/all" class="stack">
-          <label>
-            Limit (optional)
-            <input type="number" name="limit" placeholder="Example: 20" />
-          </label>
-          <button type="submit" class="btn">Dry run all unfulfilled</button>
-        </form>
+          <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/settings">Settings</a>
+            <a href="/runs">Runs</a>
+            <a href="/logout">Logout</a>
+          </nav>
+        </div>
+      </header>
 
-        <form method="post" action="/run/apply/all" class="stack top-gap">
-          <label>
-            Limit (optional)
-            <input type="number" name="limit" placeholder="Example: 20" />
-          </label>
-          <button type="submit" class="btn btn-danger">Apply all unfulfilled</button>
-        </form>
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (success) { %>
+        <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <section class="hero-panel">
+        <div class="hero-grid">
+          <div>
+            <div class="hero-kicker">Automation control center</div>
+            <h2 class="hero-title">Run gift-mask actions with one clean dashboard.</h2>
+            <p class="hero-text">
+              Use dry runs for safe previews, apply changes to selected or all unfulfilled orders,
+              and keep the full mask-tier logic visible at a glance.
+            </p>
+          </div>
+
+          <div class="hero-side">
+            <div class="metric-card">
+              <div class="metric-label">Reason</div>
+              <div class="metric-value"><%= giftReason %></div>
+              <div class="metric-note">Current discount and staff note text</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">Last mode</div>
+              <div class="metric-value"><%= latestRun ? latestRun.mode : "—" %></div>
+              <div class="metric-note">Latest run mode</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">Applied</div>
+              <div class="metric-value"><%= latestRun ? latestRun.summary.applied : 0 %></div>
+              <div class="metric-note">Last run result</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">Failed</div>
+              <div class="metric-value"><%= latestRun ? latestRun.summary.failed : 0 %></div>
+              <div class="metric-note">Last run result</div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section class="card">
-        <h2>Selected Orders</h2>
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Run actions</h2>
+              <p class="muted">Choose a safe dry run or apply changes immediately.</p>
+            </div>
+          </div>
 
-        <form method="post" action="/run/dry/selected" class="stack">
-          <label>
-            Order numbers
-            <input
-              type="text"
-              name="orderNumbers"
-              value="<%= defaultOrderNumbers %>"
-              placeholder="126257,126258,126259"
-            />
-          </label>
-          <button type="submit" class="btn">Dry run selected orders</button>
-        </form>
+          <div class="action-grid">
+            <section class="card">
+              <h3>All unfulfilled orders</h3>
+              <p class="muted">
+                Use an optional limit while testing, then remove it for a full batch run.
+              </p>
 
-        <form method="post" action="/run/apply/selected" class="stack top-gap">
-          <label>
-            Order numbers
-            <input
-              type="text"
-              name="orderNumbers"
-              value="<%= defaultOrderNumbers %>"
-              placeholder="126257,126258,126259"
-            />
-          </label>
-          <button type="submit" class="btn btn-danger">Apply selected orders</button>
-        </form>
+              <form method="post" action="/run/dry/all" class="form-stack">
+                <div>
+                  <label class="form-label">Limit (optional)</label>
+                  <input class="form-control" type="number" name="limit" placeholder="Example: 20" />
+                </div>
+                <div class="button-row">
+                  <button type="submit" class="button button-secondary">Dry run all</button>
+                </div>
+              </form>
+
+              <div class="page-spacer"></div>
+
+              <form method="post" action="/run/apply/all" class="form-stack">
+                <div>
+                  <label class="form-label">Limit (optional)</label>
+                  <input class="form-control" type="number" name="limit" placeholder="Example: 20" />
+                </div>
+                <div class="button-row">
+                  <button type="submit" class="button button-danger">Apply all</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="card">
+              <h3>Selected orders</h3>
+              <p class="muted">
+                Comma-separated order numbers let you test or rerun only the orders you want.
+              </p>
+
+              <form method="post" action="/run/dry/selected" class="form-stack">
+                <div>
+                  <label class="form-label">Order numbers</label>
+                  <input
+                    class="form-control"
+                    type="text"
+                    name="orderNumbers"
+                    value="<%= defaultOrderNumbers %>"
+                    placeholder="126257,126258,126259"
+                  />
+                </div>
+                <div class="button-row">
+                  <button type="submit" class="button button-secondary">Dry run selected</button>
+                </div>
+              </form>
+
+              <div class="page-spacer"></div>
+
+              <form method="post" action="/run/apply/selected" class="form-stack">
+                <div>
+                  <label class="form-label">Order numbers</label>
+                  <input
+                    class="form-control"
+                    type="text"
+                    name="orderNumbers"
+                    value="<%= defaultOrderNumbers %>"
+                    placeholder="126257,126258,126259"
+                  />
+                </div>
+                <div class="button-row">
+                  <button type="submit" class="button button-danger">Apply selected</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Current gift rules</h2>
+              <p class="muted">SKU order defines priority. The first SKU is used first.</p>
+            </div>
+            <a href="/settings" class="button button-ghost">Edit settings</a>
+          </div>
+
+          <div class="rules-grid">
+            <% giftRules.forEach(rule => { %>
+              <article class="card rule-card">
+                <h3><%= rule.label %></h3>
+                <p class="muted">
+                  <% if (rule.maxExclusive == null) { %>
+                    €<%= rule.min %>+
+                  <% } else { %>
+                    €<%= rule.min %> to &lt; €<%= rule.maxExclusive %>
+                  <% } %>
+                </p>
+                <p><strong>SKUs:</strong> <%= rule.skus.join(", ") %></p>
+              </article>
+            <% }) %>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Latest run</h2>
+              <p class="muted">The newest run result is always summarized here.</p>
+            </div>
+          </div>
+
+          <% if (!latestRun) { %>
+            <div class="empty-state">No runs yet.</div>
+          <% } else { %>
+            <div class="meta-grid" style="margin-bottom: 18px;">
+              <div class="meta-card">
+                <div class="meta-label">Mode</div>
+                <div class="meta-value"><%= latestRun.mode %></div>
+              </div>
+              <div class="meta-card">
+                <div class="meta-label">Selection</div>
+                <div class="meta-value"><%= latestRun.selectionMode %></div>
+              </div>
+              <div class="meta-card">
+                <div class="meta-label">Fetched</div>
+                <div class="meta-value" style="font-size:16px;"><%= latestRun.fetchedAt %></div>
+              </div>
+              <div class="meta-card">
+                <div class="meta-label">Orders scanned</div>
+                <div class="meta-value"><%= latestRun.summary.totalFetchedOrders %></div>
+              </div>
+            </div>
+
+            <div class="data-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Subtotal</th>
+                    <th>Tier</th>
+                    <th>SKU</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% latestRun.results.forEach(row => { %>
+                    <tr>
+                      <td><%= row.orderName %></td>
+                      <td><%= row.subtotal || "-" %></td>
+                      <td><%= row.plannedTier || "-" %></td>
+                      <td><%= row.plannedSku || "-" %></td>
+                      <td>
+                        <span class="status-badge status-<%= row.status %>">
+                          <%= row.status %>
+                        </span>
+                      </td>
+                      <td><%= row.reason %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
       </section>
     </div>
-
-    <section class="card">
-      <h2>Latest Run</h2>
-
-      <% if (!latestRun) { %>
-        <p class="muted">No runs yet.</p>
-      <% } else { %>
-        <div class="summary-grid">
-          <div class="summary-box">
-            <div class="summary-label">Mode</div>
-            <div class="summary-value"><%= latestRun.mode %></div>
-          </div>
-          <div class="summary-box">
-            <div class="summary-label">Selection</div>
-            <div class="summary-value"><%= latestRun.selectionMode %></div>
-          </div>
-          <div class="summary-box">
-            <div class="summary-label">Applied</div>
-            <div class="summary-value"><%= latestRun.summary.applied %></div>
-          </div>
-          <div class="summary-box">
-            <div class="summary-label">Planned</div>
-            <div class="summary-value"><%= latestRun.summary.planned %></div>
-          </div>
-          <div class="summary-box">
-            <div class="summary-label">Skipped</div>
-            <div class="summary-value"><%= latestRun.summary.skipped %></div>
-          </div>
-          <div class="summary-box">
-            <div class="summary-label">Failed</div>
-            <div class="summary-value"><%= latestRun.summary.failed %></div>
-          </div>
-        </div>
-
-        <p class="muted">
-          Fetched at: <%= latestRun.fetchedAt %> |
-          Orders scanned: <%= latestRun.summary.totalFetchedOrders %>
-        </p>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Subtotal</th>
-                <th>Tier</th>
-                <th>SKU</th>
-                <th>Status</th>
-                <th>Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% latestRun.results.forEach(row => { %>
-                <tr>
-                  <td><%= row.orderName %></td>
-                  <td><%= row.subtotal || "-" %></td>
-                  <td><%= row.plannedTier || "-" %></td>
-                  <td><%= row.plannedSku || "-" %></td>
-                  <td><%= row.status %></td>
-                  <td><%= row.reason %></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      <% } %>
-    </section>
-  </div>
+  </main>
 </body>
 </html>
