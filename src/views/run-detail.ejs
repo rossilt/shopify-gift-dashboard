@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="page-header">
+      <div>
+        <h1>Run Detail</h1>
+        <p class="muted"><%= entry.savedAt %></p>
+      </div>
+
+      <nav class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/settings">Settings</a>
+        <a href="/runs">Runs</a>
+      </nav>
+    </header>
+
+    <section class="card">
+      <p><strong>Mode:</strong> <%= entry.run.mode %></p>
+      <p><strong>Selection:</strong> <%= entry.run.selectionMode %></p>
+      <p><strong>Fetched at:</strong> <%= entry.run.fetchedAt %></p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Subtotal</th>
+              <th>Tier</th>
+              <th>SKU</th>
+              <th>Status</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% entry.run.results.forEach(row => { %>
+              <tr>
+                <td><%= row.orderName %></td>
+                <td><%= row.subtotal || "-" %></td>
+                <td><%= row.plannedTier || "-" %></td>
+                <td><%= row.plannedSku || "-" %></td>
+                <td><%= row.status %></td>
+                <td><%= row.reason %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

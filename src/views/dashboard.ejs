@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="page-header">
+      <div>
+        <h1>Gift Mask Dashboard</h1>
+        <p class="muted">Local dashboard for your Shopify gift-mask automation</p>
+      </div>
+
+      <nav class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/settings">Settings</a>
+        <a href="/runs">Runs</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </header>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+
+    <section class="card">
+      <h2>Current Rules</h2>
+      <p><strong>Reason:</strong> <%= giftReason %></p>
+
+      <div class="rules">
+        <% giftRules.forEach(rule => { %>
+          <div class="rule-box">
+            <strong><%= rule.label %></strong>
+            <div>
+              <% if (rule.maxExclusive == null) { %>
+                €<%= rule.min %>+
+              <% } else { %>
+                €<%= rule.min %> to &lt; €<%= rule.maxExclusive %>
+              <% } %>
+            </div>
+            <div>SKUs: <%= rule.skus.join(", ") %></div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <div class="grid-two">
+      <section class="card">
+        <h2>All Unfulfilled Orders</h2>
+
+        <form method="post" action="/run/dry/all" class="stack">
+          <label>
+            Limit (optional)
+            <input type="number" name="limit" placeholder="Example: 20" />
+          </label>
+          <button type="submit" class="btn">Dry run all unfulfilled</button>
+        </form>
+
+        <form method="post" action="/run/apply/all" class="stack top-gap">
+          <label>
+            Limit (optional)
+            <input type="number" name="limit" placeholder="Example: 20" />
+          </label>
+          <button type="submit" class="btn btn-danger">Apply all unfulfilled</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Selected Orders</h2>
+
+        <form method="post" action="/run/dry/selected" class="stack">
+          <label>
+            Order numbers
+            <input
+              type="text"
+              name="orderNumbers"
+              value="<%= defaultOrderNumbers %>"
+              placeholder="126257,126258,126259"
+            />
+          </label>
+          <button type="submit" class="btn">Dry run selected orders</button>
+        </form>
+
+        <form method="post" action="/run/apply/selected" class="stack top-gap">
+          <label>
+            Order numbers
+            <input
+              type="text"
+              name="orderNumbers"
+              value="<%= defaultOrderNumbers %>"
+              placeholder="126257,126258,126259"
+            />
+          </label>
+          <button type="submit" class="btn btn-danger">Apply selected orders</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Latest Run</h2>
+
+      <% if (!latestRun) { %>
+        <p class="muted">No runs yet.</p>
+      <% } else { %>
+        <div class="summary-grid">
+          <div class="summary-box">
+            <div class="summary-label">Mode</div>
+            <div class="summary-value"><%= latestRun.mode %></div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Selection</div>
+            <div class="summary-value"><%= latestRun.selectionMode %></div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Applied</div>
+            <div class="summary-value"><%= latestRun.summary.applied %></div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Planned</div>
+            <div class="summary-value"><%= latestRun.summary.planned %></div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Skipped</div>
+            <div class="summary-value"><%= latestRun.summary.skipped %></div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Failed</div>
+            <div class="summary-value"><%= latestRun.summary.failed %></div>
+          </div>
+        </div>
+
+        <p class="muted">
+          Fetched at: <%= latestRun.fetchedAt %> |
+          Orders scanned: <%= latestRun.summary.totalFetchedOrders %>
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Subtotal</th>
+                <th>Tier</th>
+                <th>SKU</th>
+                <th>Status</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% latestRun.results.forEach(row => { %>
+                <tr>
+                  <td><%= row.orderName %></td>
+                  <td><%= row.subtotal || "-" %></td>
+                  <td><%= row.plannedTier || "-" %></td>
+                  <td><%= row.plannedSku || "-" %></td>
+                  <td><%= row.status %></td>
+                  <td><%= row.reason %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</body>
+</html>

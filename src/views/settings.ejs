@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="page-header">
+      <div>
+        <h1>Settings</h1>
+        <p class="muted">Change the reason, schedule, and SKU priority for each gift tier</p>
+      </div>
+
+      <nav class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/settings">Settings</a>
+        <a href="/runs">Runs</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </header>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+
+    <section class="card">
+      <h2>Automation Settings</h2>
+
+      <form method="post" action="/settings" class="stack">
+        <label>
+          Gift reason
+          <input type="text" name="reasonText" value="<%= settings.reasonText %>" required />
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            name="scheduleEnabled"
+            <%= settings.scheduleEnabled ? "checked" : "" %>
+          />
+          Enable daily schedule
+        </label>
+
+        <label>
+          Schedule hour (0-23)
+          <input
+            type="number"
+            name="scheduleHour"
+            min="0"
+            max="23"
+            value="<%= settings.scheduleHour %>"
+            required
+          />
+        </label>
+
+        <label>
+          Schedule minute (0-59)
+          <input
+            type="number"
+            name="scheduleMinute"
+            min="0"
+            max="59"
+            value="<%= settings.scheduleMinute %>"
+            required
+          />
+        </label>
+
+        <label>
+          Timezone
+          <input type="text" name="timezone" value="<%= settings.timezone %>" required />
+        </label>
+
+        <h2>Tier SKU Priority</h2>
+        <p class="muted">Enter SKUs separated by commas. The first SKU is used first, the next ones are fallback options.</p>
+
+        <% settings.giftRules.forEach(rule => { %>
+          <label>
+            <strong><%= rule.label %></strong>
+            <input
+              type="text"
+              name="giftRule_<%= rule.tier %>"
+              value="<%= rule.skus.join(', ') %>"
+              required
+            />
+          </label>
+        <% }) %>
+
+        <button type="submit" class="btn">Save settings</button>
+      </form>
+    </section>
+  </div>
+</body>
+</html>

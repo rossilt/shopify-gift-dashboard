@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="page-header">
+      <div>
+        <h1>Runs</h1>
+        <p class="muted">Temporary in-memory history</p>
+      </div>
+
+      <nav class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/settings">Settings</a>
+        <a href="/runs">Runs</a>
+      </nav>
+    </header>
+
+    <section class="card">
+      <% if (!runHistory.length) { %>
+        <p class="muted">No runs saved yet.</p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Saved At</th>
+                <th>Mode</th>
+                <th>Selection</th>
+                <th>Applied</th>
+                <th>Planned</th>
+                <th>Skipped</th>
+                <th>Failed</th>
+                <th>Open</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% runHistory.forEach(entry => { %>
+                <tr>
+                  <td><%= entry.savedAt %></td>
+                  <td><%= entry.run.mode %></td>
+                  <td><%= entry.run.selectionMode %></td>
+                  <td><%= entry.run.summary.applied %></td>
+                  <td><%= entry.run.summary.planned %></td>
+                  <td><%= entry.run.summary.skipped %></td>
+                  <td><%= entry.run.summary.failed %></td>
+                  <td><a href="/runs/<%= entry.id %>">View</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</body>
+</html>
