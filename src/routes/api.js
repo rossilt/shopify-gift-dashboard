@@ -55,8 +55,11 @@ function buildSearchString(raw) {
   const term = String(raw || "").trim();
   if (!term) return "";
 
-  const escaped = term.replace(/["\\]/g, "\\$&");
-  return `sku:*${escaped}* OR title:*${escaped}* OR product_title:*${escaped}*`;
+  // Pass the term as-is so Shopify's default full-text search runs across SKU,
+  // variant title, and product title in one go. Field-qualified wildcard queries
+  // like `sku:*foo bar*` break on multi-word input because the unquoted space is
+  // parsed as an AND between two separate clauses.
+  return term.replace(/["\\]/g, "\\$&");
 }
 
 function escapeSkuForQuery(sku) {
