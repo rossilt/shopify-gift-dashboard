@@ -45,11 +45,11 @@
           <div class="section-head">
             <div>
               <h2>Automation settings</h2>
-              <p class="muted">Adjust reason text, schedule, timezone, and SKU priority.</p>
+              <p class="muted">Adjust reason text, schedule, timezone, and gift product priority per order value tier.</p>
             </div>
           </div>
 
-          <form method="post" action="/settings" class="form-stack">
+          <form method="post" action="/settings" class="form-stack" id="settings-form">
             <div class="form-grid">
               <div>
                 <label class="form-label">Gift reason</label>
@@ -78,22 +78,42 @@
             </label>
 
             <section class="card">
-              <h3>Tier SKU priority</h3>
+              <h3>Tier gift priority</h3>
               <p class="muted">
-                Separate SKUs with commas. The first SKU is tried first, then the next SKU becomes fallback.
+                Search your Shopify catalog and add products in priority order. The first product is tried first; the next one is used as a fallback if it's out of stock.
               </p>
 
               <div class="form-stack">
                 <% settings.giftRules.forEach(rule => { %>
-                  <div>
+                  <div
+                    class="tier-rule"
+                    data-tier="<%= rule.tier %>"
+                    data-skus="<%= rule.skus.join(',') %>"
+                  >
                     <label class="form-label"><%= rule.label %></label>
+
                     <input
-                      class="form-control"
-                      type="text"
+                      type="hidden"
                       name="giftRule_<%= rule.tier %>"
                       value="<%= rule.skus.join(', ') %>"
-                      required
+                      data-sku-input
                     />
+
+                    <ul class="chip-list" data-chip-list>
+                      <li class="chip-empty" data-chip-empty>No products selected yet.</li>
+                    </ul>
+
+                    <div class="search-box">
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder="Search by product title or SKU..."
+                        data-search-input
+                        autocomplete="off"
+                      />
+                      <div class="search-results" data-search-results hidden></div>
+                    </div>
+
                     <div class="form-help">
                       Fixed price band:
                       <% if (rule.maxExclusive == null) { %>
@@ -116,5 +136,269 @@
       </section>
     </div>
   </main>
+
+  <script>
+    (function () {
+      const tiers = document.querySelectorAll(".tier-rule");
+      if (tiers.length === 0) return;
+
+      function debounce(fn, delay) {
+        let timer = null;
+        return function (...args) {
+          clearTimeout(timer);
+          timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function setupTier(tierEl) {
+        const skuInput = tierEl.querySelector("[data-sku-input]");
+        const chipList = tierEl.querySelector("[data-chip-list]");
+        const chipEmpty = tierEl.querySelector("[data-chip-empty]");
+        const searchInput = tierEl.querySelector("[data-search-input]");
+        const resultsBox = tierEl.querySelector("[data-search-results]");
+
+        const initialSkus = (tierEl.dataset.skus || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const variants = new Map();
+        const order = [];
+
+        function syncHidden() {
+          skuInput.value = order.join(", ");
+        }
+
+        function renderChips() {
+          chipList.querySelectorAll(".chip").forEach((el) => el.remove());
+
+          if (order.length === 0) {
+            chipEmpty.hidden = false;
+          } else {
+            chipEmpty.hidden = true;
+          }
+
+          order.forEach((sku, index) => {
+            const variant = variants.get(sku) || { sku, productTitle: "", variantTitle: "", available: null, image: null };
+            const li = document.createElement("li");
+            li.className = "chip";
+            li.dataset.sku = sku;
+
+            const stockHtml = variant.available == null
+              ? ""
+              : `<span class="chip-stock ${variant.available > 0 ? "ok" : "low"}">${variant.available} in stock</span>`;
+
+            const variantTitleHtml = variant.variantTitle && variant.variantTitle !== "Default Title"
+              ? `<span class="chip-variant-title">${escapeHtml(variant.variantTitle)}</span>`
+              : "";
+
+            const imageHtml = variant.image
+              ? `<img class="chip-image" src="${escapeHtml(variant.image)}" alt="" />`
+              : `<div class="chip-image chip-image-placeholder"></div>`;
+
+            li.innerHTML = `
+              <div class="chip-priority">${index + 1}</div>
+              ${imageHtml}
+              <div class="chip-body">
+                <div class="chip-title">${escapeHtml(variant.productTitle || sku)}</div>
+                <div class="chip-meta">
+                  <span class="chip-sku">${escapeHtml(sku)}</span>
+                  ${variantTitleHtml}
+                  ${stockHtml}
+                </div>
+              </div>
+              <div class="chip-actions">
+                <button type="button" class="chip-button" data-action="up" title="Move up" aria-label="Move up">▲</button>
+                <button type="button" class="chip-button" data-action="down" title="Move down" aria-label="Move down">▼</button>
+                <button type="button" class="chip-button chip-remove" data-action="remove" title="Remove" aria-label="Remove">×</button>
+              </div>
+            `;
+
+            chipList.appendChild(li);
+          });
+
+          syncHidden();
+        }
+
+        function addSku(variant) {
+          if (!variant || !variant.sku) return;
+          if (order.includes(variant.sku)) return;
+
+          variants.set(variant.sku, variant);
+          order.push(variant.sku);
+          renderChips();
+        }
+
+        function removeAt(index) {
+          const [removed] = order.splice(index, 1);
+          if (removed) variants.delete(removed);
+          renderChips();
+        }
+
+        function moveAt(index, delta) {
+          const target = index + delta;
+          if (target < 0 || target >= order.length) return;
+          const [item] = order.splice(index, 1);
+          order.splice(target, 0, item);
+          renderChips();
+        }
+
+        chipList.addEventListener("click", (event) => {
+          const button = event.target.closest(".chip-button");
+          if (!button) return;
+          const chip = button.closest(".chip");
+          if (!chip) return;
+          const index = order.indexOf(chip.dataset.sku);
+          if (index === -1) return;
+
+          const action = button.dataset.action;
+          if (action === "remove") removeAt(index);
+          if (action === "up") moveAt(index, -1);
+          if (action === "down") moveAt(index, 1);
+        });
+
+        function renderResults(items) {
+          if (!items || items.length === 0) {
+            resultsBox.innerHTML = `<div class="search-empty">No matches.</div>`;
+            resultsBox.hidden = false;
+            return;
+          }
+
+          resultsBox.innerHTML = items
+            .map((variant) => {
+              const stock = `<span class="search-stock ${variant.available > 0 ? "ok" : "low"}">${variant.available} in stock</span>`;
+              const variantTitleHtml = variant.variantTitle && variant.variantTitle !== "Default Title"
+                ? `<span class="search-variant">${escapeHtml(variant.variantTitle)}</span>`
+                : "";
+              const imageHtml = variant.image
+                ? `<img class="search-image" src="${escapeHtml(variant.image)}" alt="" />`
+                : `<div class="search-image search-image-placeholder"></div>`;
+
+              const alreadyAdded = order.includes(variant.sku);
+
+              return `
+                <button type="button" class="search-result" data-sku="${escapeHtml(variant.sku)}" ${alreadyAdded ? "disabled" : ""}>
+                  ${imageHtml}
+                  <div class="search-result-body">
+                    <div class="search-result-title">${escapeHtml(variant.productTitle || variant.sku)}</div>
+                    <div class="search-result-meta">
+                      <span class="search-sku">${escapeHtml(variant.sku)}</span>
+                      ${variantTitleHtml}
+                      ${stock}
+                      ${alreadyAdded ? `<span class="search-added">Added</span>` : ""}
+                    </div>
+                  </div>
+                </button>
+              `;
+            })
+            .join("");
+
+          resultsBox.hidden = false;
+
+          resultsBox.querySelectorAll(".search-result").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              if (btn.disabled) return;
+              const sku = btn.dataset.sku;
+              const variant = currentResultsBySku.get(sku);
+              if (variant) {
+                addSku(variant);
+                searchInput.value = "";
+                resultsBox.hidden = true;
+                resultsBox.innerHTML = "";
+              }
+            });
+          });
+        }
+
+        let currentResultsBySku = new Map();
+        let activeRequestId = 0;
+
+        const runSearch = debounce(async (term) => {
+          if (!term || term.length < 2) {
+            resultsBox.hidden = true;
+            resultsBox.innerHTML = "";
+            return;
+          }
+
+          const requestId = ++activeRequestId;
+
+          try {
+            const url = `/api/products/search?q=${encodeURIComponent(term)}`;
+            const response = await fetch(url, { headers: { Accept: "application/json" } });
+
+            if (!response.ok) {
+              throw new Error(`Search failed: ${response.status}`);
+            }
+
+            const json = await response.json();
+            if (requestId !== activeRequestId) return;
+
+            currentResultsBySku = new Map((json.results || []).map((v) => [v.sku, v]));
+            renderResults(json.results || []);
+          } catch (err) {
+            if (requestId !== activeRequestId) return;
+            resultsBox.innerHTML = `<div class="search-empty">Error: ${escapeHtml(err.message)}</div>`;
+            resultsBox.hidden = false;
+          }
+        }, 250);
+
+        searchInput.addEventListener("input", (event) => {
+          runSearch(event.target.value.trim());
+        });
+
+        searchInput.addEventListener("focus", (event) => {
+          if (event.target.value.trim().length >= 2) {
+            runSearch(event.target.value.trim());
+          }
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!tierEl.contains(event.target)) {
+            resultsBox.hidden = true;
+          }
+        });
+
+        // Hydrate initial chips with bare SKUs first so they show immediately,
+        // then enrich them with product titles + stock from Shopify.
+        initialSkus.forEach((sku) => {
+          variants.set(sku, { sku, productTitle: "", variantTitle: "", available: null, image: null });
+          order.push(sku);
+        });
+        renderChips();
+
+        if (initialSkus.length > 0) {
+          fetch(`/api/products/lookup?skus=${encodeURIComponent(initialSkus.join(","))}`, {
+            headers: { Accept: "application/json" },
+          })
+            .then((res) => (res.ok ? res.json() : { variants: {} }))
+            .then((json) => {
+              const lookup = json.variants || {};
+              let changed = false;
+              for (const sku of initialSkus) {
+                if (lookup[sku]) {
+                  variants.set(sku, lookup[sku]);
+                  changed = true;
+                }
+              }
+              if (changed) renderChips();
+            })
+            .catch(() => {
+              // Hydration is best-effort; bare SKU chips remain.
+            });
+        }
+      }
+
+      tiers.forEach(setupTier);
+    })();
+  </script>
 </body>
 </html>
