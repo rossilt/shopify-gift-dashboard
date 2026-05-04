@@ -26,6 +26,7 @@ module.exports = {
     .filter(Boolean),
 
   SUCCESS_TAG: "mask-gift-added",
+  CHECKED_TAG: "mask-checked",
   SKIP_TAG: "no-mask",
 
   GIFT_REASON: process.env.GIFT_REASON || "DOVANA",
