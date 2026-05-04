@@ -1,6 +1,7 @@
 const {
   LOCATION_ID,
   SUCCESS_TAG,
+  CHECKED_TAG,
   SKIP_TAG,
   GIFT_REASON,
   SHOP,
@@ -360,6 +361,7 @@ async function fetchAllUnfulfilledOrders(accessToken, limit = null) {
   const queryString = [
     "status:open",
     "fulfillment_status:unfulfilled",
+    `tag_not:${CHECKED_TAG}`,
     `tag_not:${SUCCESS_TAG}`,
     `tag_not:${SKIP_TAG}`,
   ].join(" ");
@@ -650,7 +652,7 @@ async function applyGiftToOrder(accessToken, row, reasonText) {
     TAGS_ADD,
     {
       id: row.orderId,
-      tags: [SUCCESS_TAG, `mask-gift-sku-${row.plannedSku}`],
+      tags: [SUCCESS_TAG, CHECKED_TAG, `mask-gift-sku-${row.plannedSku}`],
     },
     accessToken
   );
@@ -669,6 +671,19 @@ async function applyGiftToOrder(accessToken, row, reasonText) {
     calculatedLineItemId,
     successMessages: commitPayload.successMessages || [],
   };
+}
+
+async function markOrderChecked(accessToken, orderId) {
+  const data = await gql(TAGS_ADD, { id: orderId, tags: [CHECKED_TAG] }, accessToken);
+  const payload = data.tagsAdd;
+
+  if (!payload) {
+    throw new Error("tagsAdd returned no payload");
+  }
+
+  if (payload.userErrors?.length) {
+    throw new Error(`tagsAdd userErrors: ${JSON.stringify(payload.userErrors)}`);
+  }
 }
 
 async function runGiftJob({
@@ -711,6 +726,21 @@ async function runGiftJob({
   } else {
     for (const row of plan.results) {
       if (row.status !== "planned") {
+        // Mark every processed order as checked, even when the engine decided
+        // not to add a gift, so the merchant can see what was evaluated and
+        // future runs don't re-fetch the same order.
+        if (row.orderId) {
+          try {
+            await markOrderChecked(accessToken, row.orderId);
+          } catch (error) {
+            results.push({
+              ...row,
+              reason: `${row.reason} | Failed to add ${CHECKED_TAG} tag: ${error.message}`.trim(),
+            });
+            continue;
+          }
+        }
+
         results.push(row);
         continue;
       }
@@ -723,6 +753,8 @@ async function runGiftJob({
           reason: `Gift added with reason ${reasonText}, discounted 100%, committed, and tagged. ${applyResult.successMessages.join(" | ")}`.trim(),
         });
       } catch (error) {
+        // Apply failed mid-flight (transient/network/GraphQL error). Do NOT
+        // mark as checked so the next run can retry this order.
         results.push({
           ...row,
           status: "failed",
@@ -765,5 +797,6 @@ module.exports = {
   fetchAllUnfulfilledOrders,
   planAssignments,
   applyGiftToOrder,
+  markOrderChecked,
   runGiftJob,
 };
