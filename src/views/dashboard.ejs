@@ -46,8 +46,8 @@
             <div class="hero-kicker">Automation control center</div>
             <h2 class="hero-title">Run gift-mask actions with one clean dashboard.</h2>
             <p class="hero-text">
-              Use dry runs for safe previews, apply changes to selected or all unfulfilled orders,
-              and keep the full mask-tier logic visible at a glance.
+              Use a dry run for a safe preview, then apply the gift to all unfulfilled orders.
+              Watch the live progress and see how many were added, skipped, or failed in real time.
             </p>
           </div>
 
@@ -84,81 +84,69 @@
           <div class="section-head">
             <div>
               <h2>Run actions</h2>
-              <p class="muted">Choose a safe dry run or apply changes immediately.</p>
+              <p class="muted">Choose a safe dry run or apply changes immediately to all unfulfilled orders.</p>
             </div>
           </div>
 
-          <div class="action-grid">
-            <section class="card">
-              <h3>All unfulfilled orders</h3>
-              <p class="muted">
-                Use an optional limit while testing, then remove it for a full batch run.
-              </p>
+          <section class="card">
+            <h3>All unfulfilled orders</h3>
+            <p class="muted">
+              Use an optional limit while testing, then remove it for a full batch run.
+            </p>
 
-              <form method="post" action="/run/dry/all" class="form-stack">
-                <div>
-                  <label class="form-label">Limit (optional)</label>
-                  <input class="form-control" type="number" name="limit" placeholder="Example: 20" />
-                </div>
-                <div class="button-row">
-                  <button type="submit" class="button button-secondary">Dry run all</button>
-                </div>
-              </form>
+            <div class="form-grid">
+              <div>
+                <label class="form-label" for="run-limit">Limit (optional)</label>
+                <input class="form-control" type="number" id="run-limit" placeholder="Example: 20" />
+              </div>
+            </div>
 
-              <div class="page-spacer"></div>
+            <div class="page-spacer"></div>
 
-              <form method="post" action="/run/apply/all" class="form-stack">
-                <div>
-                  <label class="form-label">Limit (optional)</label>
-                  <input class="form-control" type="number" name="limit" placeholder="Example: 20" />
-                </div>
-                <div class="button-row">
-                  <button type="submit" class="button button-danger">Apply all</button>
-                </div>
-              </form>
-            </section>
+            <div class="button-row">
+              <button type="button" class="button button-secondary" id="btn-dry-all">Dry run all</button>
+              <button type="button" class="button button-danger" id="btn-apply-all">Apply all</button>
+            </div>
+          </section>
 
-            <section class="card">
-              <h3>Selected orders</h3>
-              <p class="muted">
-                Comma-separated order numbers let you test or rerun only the orders you want.
-              </p>
+          <div class="page-spacer"></div>
 
-              <form method="post" action="/run/dry/selected" class="form-stack">
-                <div>
-                  <label class="form-label">Order numbers</label>
-                  <input
-                    class="form-control"
-                    type="text"
-                    name="orderNumbers"
-                    value="<%= defaultOrderNumbers %>"
-                    placeholder="126257,126258,126259"
-                  />
-                </div>
-                <div class="button-row">
-                  <button type="submit" class="button button-secondary">Dry run selected</button>
-                </div>
-              </form>
+          <section class="card progress-card" id="progress-card" hidden>
+            <div class="progress-head">
+              <h3 id="progress-title">Run in progress</h3>
+              <span class="progress-phase" id="progress-phase">Starting…</span>
+            </div>
 
-              <div class="page-spacer"></div>
+            <div class="progress-bar" aria-hidden="true">
+              <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
 
-              <form method="post" action="/run/apply/selected" class="form-stack">
-                <div>
-                  <label class="form-label">Order numbers</label>
-                  <input
-                    class="form-control"
-                    type="text"
-                    name="orderNumbers"
-                    value="<%= defaultOrderNumbers %>"
-                    placeholder="126257,126258,126259"
-                  />
-                </div>
-                <div class="button-row">
-                  <button type="submit" class="button button-danger">Apply selected</button>
-                </div>
-              </form>
-            </section>
-          </div>
+            <div class="progress-meta">
+              <span id="progress-counts">0 / 0 orders</span>
+              <span id="progress-current" class="muted"></span>
+            </div>
+
+            <div class="progress-stats">
+              <div class="progress-stat">
+                <div class="progress-stat-label">Applied</div>
+                <div class="progress-stat-value progress-applied" id="stat-applied">0</div>
+              </div>
+              <div class="progress-stat">
+                <div class="progress-stat-label">Skipped</div>
+                <div class="progress-stat-value progress-skipped" id="stat-skipped">0</div>
+              </div>
+              <div class="progress-stat">
+                <div class="progress-stat-label">Failed</div>
+                <div class="progress-stat-value progress-failed" id="stat-failed">0</div>
+              </div>
+              <div class="progress-stat">
+                <div class="progress-stat-label">Fetched</div>
+                <div class="progress-stat-value" id="stat-fetched">0</div>
+              </div>
+            </div>
+
+            <div class="progress-message" id="progress-message" hidden></div>
+          </section>
         </div>
       </section>
 
@@ -256,5 +244,169 @@
       </section>
     </div>
   </main>
+
+  <script>
+    (function () {
+      const dryBtn = document.getElementById("btn-dry-all");
+      const applyBtn = document.getElementById("btn-apply-all");
+      const limitInput = document.getElementById("run-limit");
+
+      const card = document.getElementById("progress-card");
+      const titleEl = document.getElementById("progress-title");
+      const phaseEl = document.getElementById("progress-phase");
+      const fillEl = document.getElementById("progress-fill");
+      const countsEl = document.getElementById("progress-counts");
+      const currentEl = document.getElementById("progress-current");
+      const messageEl = document.getElementById("progress-message");
+      const appliedEl = document.getElementById("stat-applied");
+      const skippedEl = document.getElementById("stat-skipped");
+      const failedEl = document.getElementById("stat-failed");
+      const fetchedEl = document.getElementById("stat-fetched");
+
+      const PHASE_LABELS = {
+        queued: "Queued",
+        auth: "Authenticating with Shopify…",
+        "loading-variants": "Loading gift variants…",
+        "fetching-orders": "Fetching unfulfilled orders…",
+        planning: "Planning assignments…",
+        applying: "Applying gifts to orders…",
+        done: "Done",
+        error: "Error",
+      };
+
+      function setRunning(disabled) {
+        dryBtn.disabled = disabled;
+        applyBtn.disabled = disabled;
+        limitInput.disabled = disabled;
+      }
+
+      function showMessage(text, kind) {
+        messageEl.textContent = text;
+        messageEl.className = "progress-message" + (kind ? " progress-message-" + kind : "");
+        messageEl.hidden = !text;
+      }
+
+      function updateProgress(job) {
+        phaseEl.textContent = PHASE_LABELS[job.phase] || job.phase || "";
+
+        const total = job.total || 0;
+        const processed = job.processed || 0;
+        const pct = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0;
+
+        fillEl.style.width = pct + "%";
+
+        if (total > 0) {
+          countsEl.textContent = processed + " / " + total + " orders (" + pct + "%)";
+        } else if (job.fetched > 0) {
+          countsEl.textContent = "Fetched " + job.fetched + " orders…";
+        } else {
+          countsEl.textContent = "Working…";
+        }
+
+        currentEl.textContent = job.currentOrder ? "Last: " + job.currentOrder : "";
+        appliedEl.textContent = job.applied || 0;
+        skippedEl.textContent = job.skipped || 0;
+        failedEl.textContent = job.failed || 0;
+        fetchedEl.textContent = job.fetched || job.total || 0;
+      }
+
+      async function pollJob(jobId) {
+        const response = await fetch("/run/jobs/" + encodeURIComponent(jobId), {
+          headers: { Accept: "application/json" },
+        });
+
+        if (!response.ok) {
+          throw new Error("Job poll failed: " + response.status);
+        }
+
+        return response.json();
+      }
+
+      async function runJob(apply) {
+        setRunning(true);
+        showMessage("", null);
+
+        card.hidden = false;
+        titleEl.textContent = apply ? "Apply run in progress" : "Dry run in progress";
+        phaseEl.textContent = "Starting…";
+        fillEl.style.width = "0%";
+        countsEl.textContent = "0 / 0 orders";
+        currentEl.textContent = "";
+        appliedEl.textContent = "0";
+        skippedEl.textContent = "0";
+        failedEl.textContent = "0";
+        fetchedEl.textContent = "0";
+
+        let jobId;
+
+        try {
+          const startResponse = await fetch("/run/all/start", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              apply: apply,
+              limit: limitInput.value || null,
+            }),
+          });
+
+          if (!startResponse.ok) {
+            const err = await startResponse.json().catch(() => ({}));
+            throw new Error(err.error || ("Failed to start run: " + startResponse.status));
+          }
+
+          const startJson = await startResponse.json();
+          jobId = startJson.jobId;
+        } catch (error) {
+          showMessage(error.message, "error");
+          setRunning(false);
+          return;
+        }
+
+        // Poll until done.
+        while (true) {
+          await new Promise((r) => setTimeout(r, 800));
+
+          let job;
+          try {
+            job = await pollJob(jobId);
+          } catch (error) {
+            showMessage(error.message, "error");
+            setRunning(false);
+            return;
+          }
+
+          updateProgress(job);
+
+          if (job.state === "done") {
+            const summary =
+              "Done. Applied " + (job.applied || 0) +
+              ", skipped " + (job.skipped || 0) +
+              ", failed " + (job.failed || 0) +
+              " out of " + (job.total || 0) + " orders.";
+            showMessage(summary, "success");
+            setRunning(false);
+            // Refresh the page so the latest-run table updates.
+            setTimeout(() => window.location.reload(), 1200);
+            return;
+          }
+
+          if (job.state === "error") {
+            showMessage(job.error || "Run failed.", "error");
+            setRunning(false);
+            return;
+          }
+        }
+      }
+
+      dryBtn.addEventListener("click", () => runJob(false));
+      applyBtn.addEventListener("click", () => {
+        if (!confirm("Apply gift masks to all eligible unfulfilled orders?")) return;
+        runJob(true);
+      });
+    })();
+  </script>
 </body>
 </html>
