@@ -357,7 +357,7 @@ async function fetchSelectedOrders(accessToken, orderNumbers) {
   return normalizeSelectedOrders(data, orderNumbers);
 }
 
-async function fetchAllUnfulfilledOrders(accessToken, limit = null) {
+async function fetchAllUnfulfilledOrders(accessToken, limit = null, onPage = null) {
   const queryString = [
     "status:open",
     "fulfillment_status:unfulfilled",
@@ -396,6 +396,14 @@ async function fetchAllUnfulfilledOrders(accessToken, limit = null) {
 
       if (limit != null && orders.length >= limit) {
         break;
+      }
+    }
+
+    if (typeof onPage === "function") {
+      try {
+        onPage({ fetched: orders.length });
+      } catch (_) {
+        // Progress callback errors are non-fatal.
       }
     }
 
@@ -693,7 +701,17 @@ async function runGiftJob({
   limit = null,
   reasonText = GIFT_REASON,
   giftRules = DEFAULT_GIFT_RULES,
+  onProgress = null,
 } = {}) {
+  function emit(event) {
+    if (typeof onProgress !== "function") return;
+    try {
+      onProgress(event);
+    } catch (_) {
+      // Progress callback errors are non-fatal.
+    }
+  }
+
   if (!LOCATION_ID) {
     throw new Error("Missing LOCATION_ID in .env");
   }
@@ -704,26 +722,70 @@ async function runGiftJob({
     throw new Error("Pass orderNumbers or set allUnfulfilled=true");
   }
 
+  emit({ type: "phase", phase: "auth" });
   const accessToken = await getAccessToken();
+
+  emit({ type: "phase", phase: "loading-variants" });
   const gifts = await fetchGiftVariants(accessToken, effectiveGiftRules);
 
   let orders = [];
   let selectionMode = "";
 
+  emit({ type: "phase", phase: "fetching-orders" });
   if (allUnfulfilled) {
     selectionMode = "all-unfulfilled";
-    orders = await fetchAllUnfulfilledOrders(accessToken, limit);
+    orders = await fetchAllUnfulfilledOrders(accessToken, limit, ({ fetched }) => {
+      emit({ type: "fetch-progress", fetched });
+    });
   } else {
     selectionMode = "selected-orders";
     orders = await fetchSelectedOrders(accessToken, orderNumbers);
   }
 
+  emit({ type: "fetched", total: orders.length });
+
   const plan = planAssignments(orders, gifts, effectiveGiftRules);
+  const total = plan.results.length;
+
+  emit({ type: "planned", total });
+
   const results = [];
 
   if (!apply) {
     results.push(...plan.results);
+    emit({
+      type: "summary",
+      processed: total,
+      applied: 0,
+      planned: results.filter((r) => r.status === "planned").length,
+      skipped: results.filter((r) => r.status === "skipped").length,
+      failed: results.filter((r) => r.status === "failed").length,
+    });
   } else {
+    let processed = 0;
+    let applied = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    function emitItem(row) {
+      processed += 1;
+
+      if (row.status === "applied") applied += 1;
+      else if (row.status === "skipped") skipped += 1;
+      else if (row.status === "failed") failed += 1;
+
+      emit({
+        type: "item",
+        index: processed,
+        total,
+        orderName: row.orderName,
+        status: row.status,
+        applied,
+        skipped,
+        failed,
+      });
+    }
+
     for (const row of plan.results) {
       if (row.status !== "planned") {
         // Mark every processed order as checked, even when the engine decided
@@ -733,35 +795,51 @@ async function runGiftJob({
           try {
             await markOrderChecked(accessToken, row.orderId);
           } catch (error) {
-            results.push({
+            const annotated = {
               ...row,
               reason: `${row.reason} | Failed to add ${CHECKED_TAG} tag: ${error.message}`.trim(),
-            });
+            };
+            results.push(annotated);
+            emitItem(annotated);
             continue;
           }
         }
 
         results.push(row);
+        emitItem(row);
         continue;
       }
 
       try {
         const applyResult = await applyGiftToOrder(accessToken, row, reasonText);
-        results.push({
+        const appliedRow = {
           ...row,
           status: "applied",
           reason: `Gift added with reason ${reasonText}, discounted 100%, committed, and tagged. ${applyResult.successMessages.join(" | ")}`.trim(),
-        });
+        };
+        results.push(appliedRow);
+        emitItem(appliedRow);
       } catch (error) {
         // Apply failed mid-flight (transient/network/GraphQL error). Do NOT
         // mark as checked so the next run can retry this order.
-        results.push({
+        const failedRow = {
           ...row,
           status: "failed",
           reason: error.message,
-        });
+        };
+        results.push(failedRow);
+        emitItem(failedRow);
       }
     }
+
+    emit({
+      type: "summary",
+      processed,
+      applied,
+      skipped,
+      failed,
+      planned: results.filter((r) => r.status === "planned").length,
+    });
   }
 
   return {

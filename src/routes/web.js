@@ -1,9 +1,9 @@
 const express = require("express");
 
-const { TEST_ORDER_NUMBERS } = require("../config");
 const { runGiftJob } = require("../services/giftEngine");
 const runLogger = require("../services/runLogger");
 const settingsStore = require("../services/settingsStore");
+const jobManager = require("../services/jobManager");
 const {
   requireAuth,
   redirectIfAuthenticated,
@@ -13,19 +13,6 @@ const {
 } = require("../auth");
 
 const router = express.Router();
-
-function parseOrderInput(raw) {
-  if (!raw) return [];
-
-  return [
-    ...new Set(
-      raw
-        .split(",")
-        .map((v) => v.trim().replace(/^#/, ""))
-        .filter(Boolean)
-    ),
-  ];
-}
 
 function parseSkuList(raw) {
   return [
@@ -103,7 +90,6 @@ async function renderDashboard(res, extra = {}) {
   res.render("dashboard", {
     title: "Gift Mask Dashboard",
     latestRun,
-    defaultOrderNumbers: TEST_ORDER_NUMBERS.join(","),
     giftRules: settings.giftRules,
     giftReason: settings.reasonText,
     settings,
@@ -249,114 +235,108 @@ router.get("/runs/:id", async (req, res, next) => {
   }
 });
 
-router.post("/run/dry/all", async (req, res) => {
+function startJob({ apply, limit, settings }) {
+  const job = jobManager.createJob({
+    mode: apply ? "apply" : "dry-run",
+    limit,
+  });
+
+  // Run asynchronously — caller returns the job ID immediately.
+  (async () => {
+    try {
+      const output = await runGiftJob({
+        apply,
+        allUnfulfilled: true,
+        limit,
+        reasonText: settings.reasonText,
+        giftRules: settings.giftRules,
+        onProgress: (event) => {
+          if (event.type === "phase") {
+            jobManager.patchJob(job.id, { phase: event.phase });
+          } else if (event.type === "fetch-progress") {
+            jobManager.patchJob(job.id, { fetched: event.fetched });
+          } else if (event.type === "fetched") {
+            jobManager.patchJob(job.id, { fetched: event.total, total: event.total });
+          } else if (event.type === "planned") {
+            jobManager.patchJob(job.id, {
+              total: event.total,
+              phase: apply ? "applying" : "planning",
+            });
+          } else if (event.type === "item") {
+            jobManager.patchJob(job.id, {
+              processed: event.index,
+              total: event.total,
+              applied: event.applied,
+              skipped: event.skipped,
+              failed: event.failed,
+              currentOrder: event.orderName || null,
+              lastStatus: event.status || null,
+            });
+          } else if (event.type === "summary") {
+            jobManager.patchJob(job.id, {
+              processed: event.processed,
+              applied: event.applied,
+              skipped: event.skipped,
+              failed: event.failed,
+            });
+          }
+        },
+      });
+
+      const entry = await runLogger.saveRun(output);
+
+      jobManager.patchJob(job.id, {
+        state: "done",
+        phase: "done",
+        finishedAt: new Date().toISOString(),
+        runId: entry.id,
+        applied: output.summary.applied,
+        skipped: output.summary.skipped,
+        failed: output.summary.failed,
+        total: output.summary.totalFetchedOrders,
+        processed:
+          output.summary.applied +
+          output.summary.skipped +
+          output.summary.failed +
+          output.summary.planned,
+      });
+    } catch (error) {
+      jobManager.patchJob(job.id, {
+        state: "error",
+        phase: "error",
+        finishedAt: new Date().toISOString(),
+        error: error.message,
+      });
+    }
+  })();
+
+  return job;
+}
+
+router.post("/run/all/start", async (req, res, next) => {
   try {
-    const limit = parseLimitInput(req.body.limit);
-    const settings = await settingsStore.getSettings();
-
-    const output = await runGiftJob({
-      apply: false,
-      allUnfulfilled: true,
-      limit,
-      reasonText: settings.reasonText,
-      giftRules: settings.giftRules,
-    });
-
-    await runLogger.saveRun(output);
-
-    await renderDashboard(res, {
-      success: "Dry run for all unfulfilled orders completed successfully.",
-    });
-  } catch (error) {
-    await renderDashboard(res, {
-      error: error.message,
-    });
-  }
-});
-
-router.post("/run/apply/all", async (req, res) => {
-  try {
-    const limit = parseLimitInput(req.body.limit);
-    const settings = await settingsStore.getSettings();
-
-    const output = await runGiftJob({
-      apply: true,
-      allUnfulfilled: true,
-      limit,
-      reasonText: settings.reasonText,
-      giftRules: settings.giftRules,
-    });
-
-    await runLogger.saveRun(output);
-
-    await renderDashboard(res, {
-      success: "Apply run for all unfulfilled orders completed successfully.",
-    });
-  } catch (error) {
-    await renderDashboard(res, {
-      error: error.message,
-    });
-  }
-});
-
-router.post("/run/dry/selected", async (req, res) => {
-  try {
-    const orderNumbers = parseOrderInput(req.body.orderNumbers);
-
-    if (orderNumbers.length === 0) {
-      throw new Error("Enter at least one order number");
+    let limit;
+    try {
+      limit = parseLimitInput(req.body.limit);
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
     }
 
+    const apply = req.body.apply === true || req.body.apply === "true";
     const settings = await settingsStore.getSettings();
 
-    const output = await runGiftJob({
-      apply: false,
-      allUnfulfilled: false,
-      orderNumbers,
-      reasonText: settings.reasonText,
-      giftRules: settings.giftRules,
-    });
+    const job = startJob({ apply, limit, settings });
 
-    await runLogger.saveRun(output);
-
-    await renderDashboard(res, {
-      success: "Dry run for selected orders completed successfully.",
-    });
+    res.json({ jobId: job.id, state: job.state, mode: job.mode });
   } catch (error) {
-    await renderDashboard(res, {
-      error: error.message,
-    });
+    next(error);
   }
 });
 
-router.post("/run/apply/selected", async (req, res) => {
-  try {
-    const orderNumbers = parseOrderInput(req.body.orderNumbers);
-
-    if (orderNumbers.length === 0) {
-      throw new Error("Enter at least one order number");
-    }
-
-    const settings = await settingsStore.getSettings();
-
-    const output = await runGiftJob({
-      apply: true,
-      allUnfulfilled: false,
-      orderNumbers,
-      reasonText: settings.reasonText,
-      giftRules: settings.giftRules,
-    });
-
-    await runLogger.saveRun(output);
-
-    await renderDashboard(res, {
-      success: "Apply run for selected orders completed successfully.",
-    });
-  } catch (error) {
-    await renderDashboard(res, {
-      error: error.message,
-    });
-  }
+router.get("/run/jobs/:id", (req, res) => {
+  const job = jobManager.getJob(req.params.id);
+  if (!job) return res.status(404).json({ error: "Job not found" });
+  res.json(job);
 });
 
 module.exports = router;
