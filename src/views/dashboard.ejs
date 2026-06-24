@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="lt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,13 +8,13 @@
 </head>
 <body>
   <main class="app-shell">
-    <div class="container">
+    <div class="container container-narrow">
       <header class="page-header">
         <div class="brand-block">
           <div class="brand-mark">K</div>
           <div>
             <h1 class="brand-title">Kaukių pridėjimas</h1>
-            <p class="brand-subtitle">Modern Shopify dashboard for gift-mask automation</p>
+            <p class="brand-subtitle">Dovanų kaukių pridėjimas užsakymams</p>
           </div>
         </div>
 
@@ -24,10 +24,8 @@
           <% } %>
 
           <nav class="nav">
-            <a href="/">Dashboard</a>
-            <a href="/settings">Settings</a>
-            <a href="/runs">Runs</a>
-            <a href="/logout">Logout</a>
+            <a href="/settings">Nustatymai</a>
+            <a href="/logout">Atsijungti</a>
           </nav>
         </div>
       </header>
@@ -40,206 +38,89 @@
         <div class="alert alert-success"><%= success %></div>
       <% } %>
 
-      <section class="hero-panel">
-        <div class="hero-grid">
-          <div>
-            <div class="hero-kicker">Automation control center</div>
-            <h2 class="hero-title">Run gift-mask actions with one clean dashboard.</h2>
-            <p class="hero-text">
-              Use a dry run for a safe preview, then apply the gift to all unfulfilled orders.
-              Watch the live progress and see how many were added, skipped, or failed in real time.
-            </p>
+      <section class="surface">
+        <div class="surface-inner">
+          <div class="section-head">
+            <div>
+              <h2>Užsakymų apdorojimas</h2>
+              <p class="muted">
+                Patikrinkite likutį be pakeitimų arba pridėkite kaukes visiems neįvykdytiems užsakymams.
+              </p>
+            </div>
           </div>
 
-          <div class="hero-side">
-            <div class="metric-card">
-              <div class="metric-label">Reason</div>
-              <div class="metric-value"><%= giftReason %></div>
-              <div class="metric-note">Current discount and staff note text</div>
+          <div class="run-controls">
+            <div class="limit-field">
+              <label class="form-label" for="run-limit">Limitas (nebūtina)</label>
+              <input class="form-control" type="number" id="run-limit" min="1" placeholder="Pvz.: 20" />
             </div>
 
-            <div class="metric-card">
-              <div class="metric-label">Last mode</div>
-              <div class="metric-value"><%= latestRun ? latestRun.mode : "—" %></div>
-              <div class="metric-note">Latest run mode</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-label">Applied</div>
-              <div class="metric-value"><%= latestRun ? latestRun.summary.applied : 0 %></div>
-              <div class="metric-note">Last run result</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-label">Failed</div>
-              <div class="metric-value"><%= latestRun ? latestRun.summary.failed : 0 %></div>
-              <div class="metric-note">Last run result</div>
+            <div class="run-buttons">
+              <button type="button" class="button button-secondary" id="btn-dry-all">
+                Tikrinti likutį
+              </button>
+              <button type="button" class="button button-primary" id="btn-apply-all">
+                Pridėti kaukes
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="surface">
+      <section class="surface progress-surface" id="progress-card" hidden>
         <div class="surface-inner">
-          <div class="section-head">
-            <div>
-              <h2>Run actions</h2>
-              <p class="muted">Choose a safe dry run or apply changes immediately to all unfulfilled orders.</p>
+          <div class="progress-head">
+            <h2 id="progress-title">Vykdoma</h2>
+            <span class="progress-phase" id="progress-phase">Pradedama…</span>
+          </div>
+
+          <div class="progress-bar" aria-hidden="true">
+            <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+          </div>
+
+          <div class="progress-meta">
+            <span id="progress-counts">0 / 0 užsakymų</span>
+            <span id="progress-current" class="muted"></span>
+          </div>
+
+          <div class="progress-stats">
+            <div class="progress-stat">
+              <div class="progress-stat-label">Pridėta</div>
+              <div class="progress-stat-value progress-applied" id="stat-applied">0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Praleista</div>
+              <div class="progress-stat-value progress-skipped" id="stat-skipped">0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Klaidų</div>
+              <div class="progress-stat-value progress-failed" id="stat-failed">0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Gauta</div>
+              <div class="progress-stat-value" id="stat-fetched">0</div>
             </div>
           </div>
 
-          <section class="card">
-            <h3>All unfulfilled orders</h3>
-            <p class="muted">
-              Use an optional limit while testing, then remove it for a full batch run.
-            </p>
+          <div class="progress-message" id="progress-message" hidden></div>
 
-            <div class="form-grid">
-              <div>
-                <label class="form-label" for="run-limit">Limit (optional)</label>
-                <input class="form-control" type="number" id="run-limit" placeholder="Example: 20" />
-              </div>
-            </div>
-
-            <div class="page-spacer"></div>
-
-            <div class="button-row">
-              <button type="button" class="button button-secondary" id="btn-dry-all">Dry run all</button>
-              <button type="button" class="button button-danger" id="btn-apply-all">Apply all</button>
-            </div>
-          </section>
-
-          <div class="page-spacer"></div>
-
-          <section class="card progress-card" id="progress-card" hidden>
-            <div class="progress-head">
-              <h3 id="progress-title">Run in progress</h3>
-              <span class="progress-phase" id="progress-phase">Starting…</span>
-            </div>
-
-            <div class="progress-bar" aria-hidden="true">
-              <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
-            </div>
-
-            <div class="progress-meta">
-              <span id="progress-counts">0 / 0 orders</span>
-              <span id="progress-current" class="muted"></span>
-            </div>
-
-            <div class="progress-stats">
-              <div class="progress-stat">
-                <div class="progress-stat-label">Applied</div>
-                <div class="progress-stat-value progress-applied" id="stat-applied">0</div>
-              </div>
-              <div class="progress-stat">
-                <div class="progress-stat-label">Skipped</div>
-                <div class="progress-stat-value progress-skipped" id="stat-skipped">0</div>
-              </div>
-              <div class="progress-stat">
-                <div class="progress-stat-label">Failed</div>
-                <div class="progress-stat-value progress-failed" id="stat-failed">0</div>
-              </div>
-              <div class="progress-stat">
-                <div class="progress-stat-label">Fetched</div>
-                <div class="progress-stat-value" id="stat-fetched">0</div>
-              </div>
-            </div>
-
-            <div class="progress-message" id="progress-message" hidden></div>
-          </section>
-        </div>
-      </section>
-
-      <section class="surface">
-        <div class="surface-inner">
-          <div class="section-head">
-            <div>
-              <h2>Current gift rules</h2>
-              <p class="muted">SKU order defines priority. The first SKU is used first.</p>
-            </div>
-            <a href="/settings" class="button button-ghost">Edit settings</a>
-          </div>
-
-          <div class="rules-grid">
-            <% giftRules.forEach(rule => { %>
-              <article class="card rule-card">
-                <h3><%= rule.label %></h3>
-                <p class="muted">
-                  <% if (rule.maxExclusive == null) { %>
-                    €<%= rule.min %>+
-                  <% } else { %>
-                    €<%= rule.min %> to &lt; €<%= rule.maxExclusive %>
-                  <% } %>
-                </p>
-                <p><strong>SKUs:</strong> <%= rule.skus.join(", ") %></p>
-              </article>
-            <% }) %>
-          </div>
-        </div>
-      </section>
-
-      <section class="surface">
-        <div class="surface-inner">
-          <div class="section-head">
-            <div>
-              <h2>Latest run</h2>
-              <p class="muted">The newest run result is always summarized here.</p>
-            </div>
-          </div>
-
-          <% if (!latestRun) { %>
-            <div class="empty-state">No runs yet.</div>
-          <% } else { %>
-            <div class="meta-grid" style="margin-bottom: 18px;">
-              <div class="meta-card">
-                <div class="meta-label">Mode</div>
-                <div class="meta-value"><%= latestRun.mode %></div>
-              </div>
-              <div class="meta-card">
-                <div class="meta-label">Selection</div>
-                <div class="meta-value"><%= latestRun.selectionMode %></div>
-              </div>
-              <div class="meta-card">
-                <div class="meta-label">Fetched</div>
-                <div class="meta-value" style="font-size:16px;"><%= latestRun.fetchedAt %></div>
-              </div>
-              <div class="meta-card">
-                <div class="meta-label">Orders scanned</div>
-                <div class="meta-value"><%= latestRun.summary.totalFetchedOrders %></div>
-              </div>
-            </div>
-
+          <div class="results-wrap" id="results-wrap" hidden>
             <div class="data-table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Order</th>
-                    <th>Subtotal</th>
-                    <th>Tier</th>
+                    <th>Užsakymas</th>
+                    <th>Suma</th>
+                    <th>Pakopa</th>
                     <th>SKU</th>
-                    <th>Status</th>
-                    <th>Reason</th>
+                    <th>Būsena</th>
+                    <th>Priežastis</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <% latestRun.results.forEach(row => { %>
-                    <tr>
-                      <td><%= row.orderName %></td>
-                      <td><%= row.subtotal || "-" %></td>
-                      <td><%= row.plannedTier || "-" %></td>
-                      <td><%= row.plannedSku || "-" %></td>
-                      <td>
-                        <span class="status-badge status-<%= row.status %>">
-                          <%= row.status %>
-                        </span>
-                      </td>
-                      <td><%= row.reason %></td>
-                    </tr>
-                  <% }) %>
-                </tbody>
+                <tbody id="results-body"></tbody>
               </table>
             </div>
-          <% } %>
+          </div>
         </div>
       </section>
     </div>
@@ -262,17 +143,35 @@
       const skippedEl = document.getElementById("stat-skipped");
       const failedEl = document.getElementById("stat-failed");
       const fetchedEl = document.getElementById("stat-fetched");
+      const resultsWrap = document.getElementById("results-wrap");
+      const resultsBody = document.getElementById("results-body");
 
       const PHASE_LABELS = {
-        queued: "Queued",
-        auth: "Authenticating with Shopify…",
-        "loading-variants": "Loading gift variants…",
-        "fetching-orders": "Fetching unfulfilled orders…",
-        planning: "Planning assignments…",
-        applying: "Applying gifts to orders…",
-        done: "Done",
-        error: "Error",
+        queued: "Eilėje",
+        auth: "Jungiamasi prie Shopify…",
+        "loading-variants": "Įkeliamos dovanų prekės…",
+        "fetching-orders": "Gaunami užsakymai…",
+        planning: "Planuojama…",
+        applying: "Pridedamos kaukės…",
+        done: "Baigta",
+        error: "Klaida",
       };
+
+      const STATUS_LABELS = {
+        applied: "pridėta",
+        planned: "suplanuota",
+        skipped: "praleista",
+        failed: "klaida",
+      };
+
+      function escapeHtml(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
 
       function setRunning(disabled) {
         dryBtn.disabled = disabled;
@@ -286,6 +185,33 @@
         messageEl.hidden = !text;
       }
 
+      function renderResults(rows) {
+        if (!rows || rows.length === 0) {
+          resultsWrap.hidden = true;
+          resultsBody.innerHTML = "";
+          return;
+        }
+
+        resultsBody.innerHTML = rows
+          .map((row) => {
+            const status = row.status || "";
+            const statusLabel = STATUS_LABELS[status] || status;
+            return (
+              "<tr>" +
+              "<td>" + escapeHtml(row.orderName) + "</td>" +
+              "<td>" + escapeHtml(row.subtotal || "-") + "</td>" +
+              "<td>" + escapeHtml(row.plannedTier || "-") + "</td>" +
+              "<td>" + escapeHtml(row.plannedSku || "-") + "</td>" +
+              "<td><span class='status-badge status-" + escapeHtml(status) + "'>" + escapeHtml(statusLabel) + "</span></td>" +
+              "<td>" + escapeHtml(row.reason) + "</td>" +
+              "</tr>"
+            );
+          })
+          .join("");
+
+        resultsWrap.hidden = false;
+      }
+
       function updateProgress(job) {
         phaseEl.textContent = PHASE_LABELS[job.phase] || job.phase || "";
 
@@ -296,14 +222,14 @@
         fillEl.style.width = pct + "%";
 
         if (total > 0) {
-          countsEl.textContent = processed + " / " + total + " orders (" + pct + "%)";
+          countsEl.textContent = processed + " / " + total + " užsakymų (" + pct + "%)";
         } else if (job.fetched > 0) {
-          countsEl.textContent = "Fetched " + job.fetched + " orders…";
+          countsEl.textContent = "Gauta " + job.fetched + " užsakymų…";
         } else {
-          countsEl.textContent = "Working…";
+          countsEl.textContent = "Dirbama…";
         }
 
-        currentEl.textContent = job.currentOrder ? "Last: " + job.currentOrder : "";
+        currentEl.textContent = job.currentOrder ? "Paskutinis: " + job.currentOrder : "";
         appliedEl.textContent = job.applied || 0;
         skippedEl.textContent = job.skipped || 0;
         failedEl.textContent = job.failed || 0;
@@ -316,7 +242,7 @@
         });
 
         if (!response.ok) {
-          throw new Error("Job poll failed: " + response.status);
+          throw new Error("Nepavyko gauti būsenos: " + response.status);
         }
 
         return response.json();
@@ -325,17 +251,19 @@
       async function runJob(apply) {
         setRunning(true);
         showMessage("", null);
+        renderResults([]);
 
         card.hidden = false;
-        titleEl.textContent = apply ? "Apply run in progress" : "Dry run in progress";
-        phaseEl.textContent = "Starting…";
+        titleEl.textContent = apply ? "Kaukių pridėjimas" : "Likučio tikrinimas";
+        phaseEl.textContent = "Pradedama…";
         fillEl.style.width = "0%";
-        countsEl.textContent = "0 / 0 orders";
+        countsEl.textContent = "0 / 0 užsakymų";
         currentEl.textContent = "";
         appliedEl.textContent = "0";
         skippedEl.textContent = "0";
         failedEl.textContent = "0";
         fetchedEl.textContent = "0";
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
         let jobId;
 
@@ -354,7 +282,7 @@
 
           if (!startResponse.ok) {
             const err = await startResponse.json().catch(() => ({}));
-            throw new Error(err.error || ("Failed to start run: " + startResponse.status));
+            throw new Error(err.error || ("Nepavyko pradėti: " + startResponse.status));
           }
 
           const startJson = await startResponse.json();
@@ -382,19 +310,18 @@
 
           if (job.state === "done") {
             const summary =
-              "Done. Applied " + (job.applied || 0) +
-              ", skipped " + (job.skipped || 0) +
-              ", failed " + (job.failed || 0) +
-              " out of " + (job.total || 0) + " orders.";
+              "Baigta. Pridėta " + (job.applied || 0) +
+              ", praleista " + (job.skipped || 0) +
+              ", klaidų " + (job.failed || 0) +
+              " iš " + (job.total || 0) + " užsakymų.";
             showMessage(summary, "success");
+            renderResults(job.results || []);
             setRunning(false);
-            // Refresh the page so the latest-run table updates.
-            setTimeout(() => window.location.reload(), 1200);
             return;
           }
 
           if (job.state === "error") {
-            showMessage(job.error || "Run failed.", "error");
+            showMessage(job.error || "Vykdymas nepavyko.", "error");
             setRunning(false);
             return;
           }
@@ -403,7 +330,7 @@
 
       dryBtn.addEventListener("click", () => runJob(false));
       applyBtn.addEventListener("click", () => {
-        if (!confirm("Apply gift masks to all eligible unfulfilled orders?")) return;
+        if (!confirm("Pridėti kaukes visiems tinkamiems neįvykdytiems užsakymams?")) return;
         runJob(true);
       });
     })();
