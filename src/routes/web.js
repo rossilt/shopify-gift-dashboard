@@ -299,6 +299,16 @@ function startJob({ apply, limit, settings }) {
           output.summary.skipped +
           output.summary.failed +
           output.summary.planned,
+        // Compact result rows so the dashboard can render the outcome inline
+        // without a full-page reload.
+        results: (output.results || []).map((row) => ({
+          orderName: row.orderName,
+          subtotal: row.subtotal,
+          plannedTier: row.plannedTier,
+          plannedSku: row.plannedSku,
+          status: row.status,
+          reason: row.reason,
+        })),
       });
     } catch (error) {
       jobManager.patchJob(job.id, {

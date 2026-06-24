@@ -9,10 +9,10 @@
 <body>
   <main class="auth-shell">
     <section class="auth-card">
-      <div class="brand-pill">Shopify Automation</div>
+      <div class="brand-pill">Shopify Automatika</div>
       <h1 class="auth-title">Kaukių pridėjimas</h1>
       <p class="auth-subtitle">
-        Secure access to your gift-mask dashboard for dry runs, live runs, settings, and history.
+        Prisijunkite, kad galėtumėte tikrinti likutį, pridėti kaukes ir tvarkyti nustatymus.
       </p>
 
       <% if (error) { %>
@@ -21,16 +21,16 @@
 
       <form method="post" action="/login" class="form-stack">
         <div>
-          <label class="form-label" for="username">Username</label>
+          <label class="form-label" for="username">Vartotojo vardas</label>
           <input class="form-control" id="username" type="text" name="username" required />
         </div>
 
         <div>
-          <label class="form-label" for="password">Password</label>
+          <label class="form-label" for="password">Slaptažodis</label>
           <input class="form-control" id="password" type="password" name="password" required />
         </div>
 
-        <button type="submit" class="button button-primary">Log in</button>
+        <button type="submit" class="button button-primary">Prisijungti</button>
       </form>
     </section>
   </main>
