@@ -25,17 +25,6 @@ function parseSkuList(raw) {
   ];
 }
 
-function parseLimitInput(raw) {
-  if (!raw || String(raw).trim() === "") return null;
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error("Limit must be a positive number");
-  }
-
-  return parsed;
-}
-
 function parseSettings(body, currentSettings) {
   const scheduleHour = Number(body.scheduleHour);
   const scheduleMinute = Number(body.scheduleMinute);
@@ -235,10 +224,9 @@ router.get("/runs/:id", async (req, res, next) => {
   }
 });
 
-function startJob({ apply, limit, settings }) {
+function startJob({ apply, settings }) {
   const job = jobManager.createJob({
     mode: apply ? "apply" : "dry-run",
-    limit,
   });
 
   // Run asynchronously — caller returns the job ID immediately.
@@ -247,7 +235,6 @@ function startJob({ apply, limit, settings }) {
       const output = await runGiftJob({
         apply,
         allUnfulfilled: true,
-        limit,
         reasonText: settings.reasonText,
         giftRules: settings.giftRules,
         onProgress: (event) => {
@@ -325,17 +312,10 @@ function startJob({ apply, limit, settings }) {
 
 router.post("/run/all/start", async (req, res, next) => {
   try {
-    let limit;
-    try {
-      limit = parseLimitInput(req.body.limit);
-    } catch (error) {
-      return res.status(400).json({ error: error.message });
-    }
-
     const apply = req.body.apply === true || req.body.apply === "true";
     const settings = await settingsStore.getSettings();
 
-    const job = startJob({ apply, limit, settings });
+    const job = startJob({ apply, settings });
 
     res.json({ jobId: job.id, state: job.state, mode: job.mode });
   } catch (error) {

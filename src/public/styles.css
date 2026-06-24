@@ -646,22 +646,10 @@ tbody tr:hover {
   margin-top: 8px;
 }
 
-.run-controls {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.limit-field {
-  flex: 0 0 200px;
-}
-
 .run-buttons {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  flex: 1;
 }
 
 .run-buttons .button {
