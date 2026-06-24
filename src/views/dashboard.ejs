@@ -19,11 +19,8 @@
         </div>
 
         <div class="topbar-right">
-          <% if (currentUser) { %>
-            <div class="user-chip"><%= currentUser.username %></div>
-          <% } %>
-
           <nav class="nav">
+            <a href="/">Pradžia</a>
             <a href="/settings">Nustatymai</a>
             <a href="/logout">Atsijungti</a>
           </nav>
@@ -49,20 +46,13 @@
             </div>
           </div>
 
-          <div class="run-controls">
-            <div class="limit-field">
-              <label class="form-label" for="run-limit">Limitas (nebūtina)</label>
-              <input class="form-control" type="number" id="run-limit" min="1" placeholder="Pvz.: 20" />
-            </div>
-
-            <div class="run-buttons">
-              <button type="button" class="button button-secondary" id="btn-dry-all">
-                Tikrinti likutį
-              </button>
-              <button type="button" class="button button-primary" id="btn-apply-all">
-                Pridėti kaukes
-              </button>
-            </div>
+          <div class="run-buttons">
+            <button type="button" class="button button-secondary" id="btn-dry-all">
+              Tikrinti likutį
+            </button>
+            <button type="button" class="button button-primary" id="btn-apply-all">
+              Pridėti kaukes
+            </button>
           </div>
         </div>
       </section>
@@ -130,7 +120,6 @@
     (function () {
       const dryBtn = document.getElementById("btn-dry-all");
       const applyBtn = document.getElementById("btn-apply-all");
-      const limitInput = document.getElementById("run-limit");
 
       const card = document.getElementById("progress-card");
       const titleEl = document.getElementById("progress-title");
@@ -176,7 +165,6 @@
       function setRunning(disabled) {
         dryBtn.disabled = disabled;
         applyBtn.disabled = disabled;
-        limitInput.disabled = disabled;
       }
 
       function showMessage(text, kind) {
@@ -276,7 +264,6 @@
             },
             body: JSON.stringify({
               apply: apply,
-              limit: limitInput.value || null,
             }),
           });
 
